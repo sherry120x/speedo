@@ -34,6 +34,11 @@ jobs:
         run: |
           npm install
 
+      - name: Stage Web Assets in www
+        run: |
+          mkdir -p www
+          cp index.html style.css game.js manifest.json sw.js icon-192.png icon-512.png www/
+
       - name: Initialize & Sync Capacitor Android
         run: |
           if [ ! -d "android" ]; then
@@ -56,13 +61,13 @@ jobs:
       - name: Stage APK for Artifact Upload
         run: |
           mkdir -p build-artifacts
-          find android/app/build/outputs/apk/debug/ -name "*.apk" -exec cp {} build-artifacts/Turbo-2D-Racing-debug.apk \;
+          find android/app/build/outputs/apk/debug/ -name "*.apk" -exec cp {} build-artifacts/speedo.apk \;
           echo "Built APK size:"
           ls -lh build-artifacts/
 
       - name: Upload APK as GitHub Action Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Turbo-2D-Racing-v1.0-debug-apk
-          path: build-artifacts/Turbo-2D-Racing-debug.apk
+          name: speedo-apk
+          path: build-artifacts/speedo.apk
           retention-days: 30

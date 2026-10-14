@@ -1,8 +1,7 @@
 {
   "appId": "com.prodev.car2d",
   "appName": "Turbo 2D Racing",
-  "webDir": ".",
-  "bundledWebRuntime": false,
+  "webDir": "www",
   "server": {
     "androidScheme": "https"
   },
