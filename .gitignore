@@ -1,0 +1,21 @@
+# Node & dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Android build outputs & caches (leave APKs in build-output or release)
+android/app/build/
+android/.gradle/
+android/build/
+android/local.properties
+android/captures/
+.gradle/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs
+*.log
