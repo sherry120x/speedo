@@ -4222,10 +4222,10 @@ class GarageManager {
             const val = localStorage.getItem(this.STORAGE_COINS);
             if (val !== null) {
                 const parsed = parseInt(val, 10);
-                if (!isNaN(parsed)) return parsed;
+                if (!isNaN(parsed)) return Math.max(2000, parsed);
             }
         } catch (_) {}
-        return 1000; // Starter gift coins to test unlocking immediately
+        return 2000; // Starting gift coins set to 2,000 as requested
     }
 
     saveState() {
@@ -4280,14 +4280,21 @@ class GarageManager {
             this.closeBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.close();
+                if (this.engine.gameState === 'MENU') {
+                    this.engine.showMainMenu();
+                }
             });
         }
 
         if (this.raceBtn) {
-            this.raceBtn.addEventListener('click', (e) => {
+            const handleRaceStart = (e) => {
                 e.stopPropagation();
+                if (e.cancelable) e.preventDefault();
                 this.close();
-            });
+                this.engine.startRace();
+            };
+            this.raceBtn.addEventListener('click', handleRaceStart);
+            this.raceBtn.addEventListener('touchend', handleRaceStart);
         }
 
         // Top Bar Toggle Button
@@ -4381,6 +4388,7 @@ class GarageManager {
         if (car.id === this.selectedCarId) {
             // Already selected -> Jump straight into the race!
             this.close();
+            this.engine.startRace();
             return;
         }
 
@@ -4392,6 +4400,10 @@ class GarageManager {
             if (this.engine.player) {
                 this.engine.player.applyVehicleConfig(car);
             }
+            if (this.engine.menuCarNameEl) {
+                this.engine.menuCarNameEl.textContent = car.name.toUpperCase();
+            }
+            if (this.engine.sound) this.engine.sound.playButtonClick();
         } else if (this.coins >= car.price) {
             // Locked & Sufficient Coins -> Unlock and auto-select!
             this.coins -= car.price;
@@ -4403,6 +4415,10 @@ class GarageManager {
             if (this.engine.player) {
                 this.engine.player.applyVehicleConfig(car);
             }
+            if (this.engine.menuCarNameEl) {
+                this.engine.menuCarNameEl.textContent = car.name.toUpperCase();
+            }
+            if (this.engine.sound) this.engine.sound.playCoinChime();
             if (navigator.vibrate) {
                 try { navigator.vibrate([30, 50, 30]); } catch (_) {}
             }
@@ -5088,9 +5104,18 @@ class GameEngine {
 
     showMainMenu() {
         this.gameState = 'MENU';
-        if (this.mainMenuEl) this.mainMenuEl.classList.remove('hidden');
-        if (this.pauseModalEl) this.pauseModalEl.classList.add('hidden');
-        if (this.helpModalEl) this.helpModalEl.classList.add('hidden');
+        if (this.mainMenuEl) {
+            this.mainMenuEl.classList.remove('hidden');
+            this.mainMenuEl.style.display = 'flex';
+        }
+        if (this.pauseModalEl) {
+            this.pauseModalEl.classList.add('hidden');
+            this.pauseModalEl.style.display = 'none';
+        }
+        if (this.helpModalEl) {
+            this.helpModalEl.classList.add('hidden');
+            this.helpModalEl.style.display = 'none';
+        }
         if (this.garage && this.garage.isOpen) this.garage.close();
         if (this.levelManager) {
             this.levelManager.closeModal();
@@ -5120,11 +5145,37 @@ class GameEngine {
         this.sound.resume();
         this.sound.playButtonClick();
         this.gameState = 'PLAYING';
-        if (this.mainMenuEl) this.mainMenuEl.classList.add('hidden');
-        if (this.pauseModalEl) this.pauseModalEl.classList.add('hidden');
-        if (this.helpModalEl) this.helpModalEl.classList.add('hidden');
+        if (this.mainMenuEl) {
+            this.mainMenuEl.classList.add('hidden');
+            this.mainMenuEl.style.display = 'none';
+        }
+        if (this.pauseModalEl) {
+            this.pauseModalEl.classList.add('hidden');
+            this.pauseModalEl.style.display = 'none';
+        }
+        if (this.helpModalEl) {
+            this.helpModalEl.classList.add('hidden');
+            this.helpModalEl.style.display = 'none';
+        }
+        if (this.garage && this.garage.isOpen) {
+            this.garage.close();
+        }
+        if (this.levelManager && this.levelManager.isOpen) {
+            this.levelManager.closeModal();
+        }
         const touchUI = document.getElementById('touch-controls');
         if (touchUI) touchUI.style.display = 'flex';
+
+        // Apply active selected car configuration
+        if (this.garage && this.player) {
+            const activeCar = CARS_DATABASE.find(c => c.id === this.garage.selectedCarId) || CARS_DATABASE[0];
+            this.player.applyVehicleConfig(activeCar);
+        }
+
+        // Rolling start speed (220 km/h) so car immediately drives smoothly
+        if (this.player.speed < 220) {
+            this.player.speed = 220;
+        }
     }
 
     togglePause() {
@@ -5189,7 +5240,15 @@ class GameEngine {
     initUIFlowListeners() {
         // Main Menu Buttons
         if (this.btnMainStart) {
-            this.btnMainStart.addEventListener('click', () => this.startRace());
+            const handleStart = (e) => {
+                if (e) {
+                    if (e.cancelable) e.preventDefault();
+                    e.stopPropagation();
+                }
+                this.startRace();
+            };
+            this.btnMainStart.addEventListener('click', handleStart);
+            this.btnMainStart.addEventListener('touchend', handleStart);
         }
         if (this.btnMainLevels) {
             this.btnMainLevels.addEventListener('click', () => {

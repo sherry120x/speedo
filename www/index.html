@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0a0c10">
+    <title>Turbo 2D Racing - Apex Velocity Speedway</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Main Game Container: Maintains 9:16 aspect ratio on desktop & fits edge-to-edge on mobile -->
+    <div id="game-container">
+        <!-- 2D Canvas -->
+        <canvas id="gameCanvas" width="720" height="1280"></canvas>
+
+        <!-- Top Telemetry & Controls Bar -->
+        <header id="top-bar">
+            <div class="top-stats-left">
+                <!-- Level Select Quick Button -->
+                <button id="btn-level-select-toggle" class="stat-badge level-badge-btn" title="Select Mission (L)" aria-label="Select Mission">
+                    <span class="stat-label">TRACK</span>
+                    <span id="level-num-display" class="stat-val">LVL 1</span>
+                </button>
+                <div class="stat-badge">
+                    <span class="stat-label">DIST</span>
+                    <span id="dist-value" class="stat-val">0.00 km</span>
+                </div>
+                <div class="stat-badge coins-badge">
+                    <span class="stat-label">COINS</span>
+                    <span id="coins-value" class="stat-val">🪙 0</span>
+                </div>
+            </div>
+            
+            <div class="hud-center">
+                <div id="fps-display">60 FPS</div>
+                <div id="engine-status">DT: 16.6ms</div>
+            </div>
+
+            <div class="top-actions">
+                <button id="btn-pause" class="icon-btn" title="Pause Game (P / Esc)" aria-label="Pause Game">
+                    <svg viewBox="0 0 24 24" class="svg-icon">
+                        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                    </svg>
+                </button>
+                <button id="btn-garage-toggle" class="icon-btn garage-btn-nav" title="Garage Menu (G)" aria-label="Open Garage">
+                    <svg viewBox="0 0 24 24" class="svg-icon">
+                        <path d="M19 13H5v6h14v-6zM18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.22.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
+                    </svg>
+                </button>
+                <button id="btn-audio" class="icon-btn" title="Toggle Sound (M)" aria-label="Toggle Sound">
+                    <svg viewBox="0 0 24 24" class="svg-icon">
+                        <path id="audio-icon-path" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                    </svg>
+                </button>
+                <button id="btn-fullscreen" class="icon-btn" title="Toggle Fullscreen (F)" aria-label="Toggle Fullscreen">
+                    <svg viewBox="0 0 24 24" class="svg-icon">
+                        <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Dynamic In-Game HUD: Progress Bar, Speed, Gear, Nitro & Health -->
+        <div id="hud-overlay">
+            <!-- Finish Line Live Progress Bar -->
+            <div id="level-progress-container">
+                <div class="progress-track-wrap">
+                    <span class="track-icon start-flag">START</span>
+                    <div class="level-progress-track">
+                        <div id="level-progress-fill" class="level-progress-fill"></div>
+                        <div id="player-progress-marker" class="player-progress-marker">🏎️</div>
+                    </div>
+                    <span class="track-icon finish-flag">🏁</span>
+                    <span id="level-target-rem" class="target-rem-text">1000m</span>
+                </div>
+            </div>
+
+            <!-- Health Bar & Mission Timer Cluster -->
+            <div class="hud-sub-cluster">
+                <div class="health-box">
+                    <span class="health-icon">🛡️</span>
+                    <div class="health-track">
+                        <div id="health-fill" class="health-fill"></div>
+                    </div>
+                    <span id="health-val" class="health-val">100%</span>
+                </div>
+                <div id="level-timer-box" class="level-timer-box hidden">
+                    <span class="timer-icon">⏱️</span>
+                    <span id="level-timer-val">01:30</span>
+                </div>
+            </div>
+
+            <div id="drift-banner" class="hidden">
+                <span class="drift-text">DRIFT!</span>
+                <span id="drift-angle">24°</span>
+            </div>
+
+            <!-- Near-Miss Thrill Bonus Banner -->
+            <div id="near-miss-banner" class="near-miss-banner hidden">
+                <span class="near-miss-spark">⚡</span>
+                <span class="near-miss-text">NEAR MISS! +10 🪙</span>
+            </div>
+
+
+            <div class="dashboard-cluster">
+                <!-- Speedometer -->
+                <div class="speedometer-box">
+                    <div class="speed-number" id="speed-val">0</div>
+                    <div class="speed-unit">KM/H</div>
+                    <div class="gear-indicator" id="gear-val">N</div>
+                </div>
+
+                <!-- Nitro Tank Indicator -->
+                <div class="nitro-box">
+                    <div class="nitro-header">
+                        <span class="nitro-label">NOS BOOST</span>
+                        <span id="nitro-percent">100%</span>
+                    </div>
+                    <div class="nitro-track">
+                        <div class="nitro-fill" id="nitro-bar"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Android Multi-Touch On-Screen Gamepad Overlay -->
+        <div id="touch-controls">
+            <!-- Left Side: Steering Cluster -->
+            <div class="touch-cluster left-cluster">
+                <button id="btn-left" class="touch-btn steer-btn" aria-label="Steer Left">
+                    <svg viewBox="0 0 24 24" class="touch-icon">
+                        <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+                    </svg>
+                    <span class="key-hint">A / ◄</span>
+                </button>
+                <button id="btn-right" class="touch-btn steer-btn" aria-label="Steer Right">
+                    <svg viewBox="0 0 24 24" class="touch-icon">
+                        <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+                    </svg>
+                    <span class="key-hint">D / ►</span>
+                </button>
+            </div>
+
+            <!-- Right Side: Pedals & Nitro Cluster -->
+            <div class="touch-cluster right-cluster">
+                <!-- Nitro Button -->
+                <button id="btn-nitro" class="touch-btn nitro-btn" aria-label="Nitro Boost">
+                    <div class="nitro-btn-glow"></div>
+                    <svg viewBox="0 0 24 24" class="touch-icon">
+                        <path d="M13.5 2c-1.1 0-2 .9-2 2v2H9c-.55 0-1 .45-1 1v13c0 1.1.9 2 2 2h4c1.1 0 2-.9 2-2V7c0-.55-.45-1-1-1h-2.5V4c0-.55-.45-1-1-1zM11 9h2v10h-2V9z"/>
+                    </svg>
+                    <span class="btn-text">NITRO</span>
+                    <span class="key-hint">SPACE</span>
+                </button>
+
+                <!-- Pedals Row (Brake & Gas) -->
+                <div class="pedal-group">
+                    <button id="btn-brake" class="touch-btn brake-btn" aria-label="Brake / Reverse">
+                        <div class="pedal-ribs">
+                            <span></span><span></span><span></span>
+                        </div>
+                        <span class="pedal-label">BRAKE</span>
+                        <span class="key-hint">S / ▼</span>
+                    </button>
+                    <button id="btn-gas" class="touch-btn gas-btn" aria-label="Accelerate">
+                        <div class="pedal-ribs">
+                            <span></span><span></span><span></span><span></span>
+                        </div>
+                        <span class="pedal-label">GAS</span>
+                        <span class="key-hint">W / ▲</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls Guide Banner (Fades out after 6 seconds or on first input) -->
+        <div id="controls-hint" class="controls-hint">
+            <div class="hint-title">CONTROLS</div>
+            <div class="hint-content">
+                <div><kbd>W</kbd> / <kbd>▲</kbd> Accelerate &nbsp;|&nbsp; <kbd>S</kbd> / <kbd>▼</kbd> Brake</div>
+                <div><kbd>A</kbd> / <kbd>◄</kbd> Left &nbsp;|&nbsp; <kbd>D</kbd> / <kbd>►</kbd> Right &nbsp;|&nbsp; <kbd>SPACE</kbd> Nitro</div>
+                <div class="touch-subtext">Touch buttons active for Mobile & Touchscreens</div>
+            </div>
+        </div>
+
+        <!-- ==================================================================
+             GARAGE & VEHICLE UPGRADE / UNLOCK SCREEN (PHASE 2)
+             ================================================================== -->
+        <div id="garage-screen" class="hidden">
+            <!-- Garage Header -->
+            <div class="garage-header">
+                <div class="garage-title-wrap">
+                    <h1 class="garage-title">VEHICLE GARAGE</h1>
+                    <span class="garage-subtitle">10 UNIQUE PROTOTYPES</span>
+                </div>
+                <div class="garage-header-right">
+                    <div class="stat-badge coins-badge-garage">
+                        <span class="stat-label">VAULT</span>
+                        <span id="garage-coins-val" class="stat-val">🪙 0</span>
+                    </div>
+                    <button id="btn-close-garage" class="icon-btn close-garage-btn" title="Exit Garage" aria-label="Exit Garage">
+                        ✕
+                    </button>
+                </div>
+            </div>
+
+            <!-- Rotating Showroom Podium Viewport -->
+            <div class="podium-viewport">
+                <button id="btn-prev-car" class="podium-nav-btn prev-btn" aria-label="Previous Car">
+                    <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+                </button>
+
+                <div class="podium-center">
+                    <div class="car-badge-pill" id="car-class-badge">TIER 1 • STARTER</div>
+                    <!-- Dedicated 2D Podium Canvas for Smooth 360 Rotation -->
+                    <canvas id="garageCanvas" width="460" height="460"></canvas>
+                    <div class="podium-glow-base"></div>
+                </div>
+
+                <button id="btn-next-car" class="podium-nav-btn next-btn" aria-label="Next Car">
+                    <svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+                </button>
+            </div>
+
+            <!-- Vehicle Specs & Stat Bars Card -->
+            <div class="garage-card">
+                <div class="car-header-row">
+                    <div class="car-name-wrap">
+                        <h2 id="car-name">Rusty Hatchback</h2>
+                        <p id="car-desc">Balanced starter chassis with forgiving control and resilient bodywork.</p>
+                    </div>
+                    <div id="car-index-counter" class="car-counter">1 / 10</div>
+                </div>
+
+                <!-- 5 Stat Bars -->
+                <div class="stat-bars-container">
+                    <div class="stat-row">
+                        <span class="stat-name">TOP SPEED</span>
+                        <div class="stat-track">
+                            <div class="stat-bar-fill speed-bar" id="stat-speed"></div>
+                        </div>
+                        <span class="stat-num" id="stat-speed-val">220 km/h</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-name">ACCELERATION</span>
+                        <div class="stat-track">
+                            <div class="stat-bar-fill accel-bar" id="stat-accel"></div>
+                        </div>
+                        <span class="stat-num" id="stat-accel-val">4.2s</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-name">HANDLING</span>
+                        <div class="stat-track">
+                            <div class="stat-bar-fill handling-bar" id="stat-handling"></div>
+                        </div>
+                        <span class="stat-num" id="stat-handling-val">65%</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-name">ARMOR</span>
+                        <div class="stat-track">
+                            <div class="stat-bar-fill armor-bar" id="stat-armor"></div>
+                        </div>
+                        <span class="stat-num" id="stat-armor-val">80%</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-name">NITRO CAPACITY</span>
+                        <div class="stat-track">
+                            <div class="stat-bar-fill nitro-stat-bar" id="stat-nitro"></div>
+                        </div>
+                        <span class="stat-num" id="stat-nitro-val">100%</span>
+                    </div>
+                </div>
+
+                <!-- Action & Unlock Button Row -->
+                <div class="garage-action-row">
+                    <button id="btn-add-coins" class="coin-bonus-btn" title="Add Testing Coins (+500 🪙)">+500 🪙</button>
+                    <button id="btn-garage-action" class="garage-main-btn">
+                        <span id="btn-action-label">SELECTED</span>
+                    </button>
+                    <button id="btn-garage-race" class="garage-race-btn" title="Return to Race">
+                        <span>RACE 🏁</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================================================================
+             LEVEL SELECTION SCREEN MODAL (PHASE 3)
+             ================================================================== -->
+        <div id="level-select-screen" class="hidden">
+            <div class="modal-header">
+                <div class="modal-title-wrap">
+                    <h1 class="modal-title">MISSION TRACKS</h1>
+                    <span class="modal-subtitle">10 PROGRESSIVE LEVELS • EARN 3 STARS</span>
+                </div>
+                <button id="btn-close-levels" class="icon-btn close-modal-btn" aria-label="Close Level Select">✕</button>
+            </div>
+
+            <!-- 10 Level Cards Grid -->
+            <div class="level-grid" id="level-grid-container"></div>
+        </div>
+
+        <!-- ==================================================================
+             LEVEL COMPLETE CELEBRATION MODAL (PHASE 3)
+             ================================================================== -->
+        <div id="level-complete-modal" class="hidden">
+            <div class="celebration-card">
+                <div class="celebration-badge">VICTORY!</div>
+                <h2 class="celebration-title" id="complete-level-title">SUBURBAN CRUISE COMPLETE</h2>
+                
+                <!-- 3 Star Ratings Animation -->
+                <div class="stars-cluster" id="complete-stars">
+                    <span class="star-icon" id="star-1">★</span>
+                    <span class="star-icon" id="star-2">★</span>
+                    <span class="star-icon" id="star-3">★</span>
+                </div>
+                <div class="stars-desc" id="complete-stars-desc">Clean Run & Full Distance Achieved!</div>
+
+                <!-- Mission Telemetry Summary -->
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <span class="summary-label">DISTANCE</span>
+                        <span class="summary-val" id="summary-distance">1,000 m</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">TOP SPEED</span>
+                        <span class="summary-val" id="summary-speed">245 km/h</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">REWARD</span>
+                        <span class="summary-val gold" id="summary-coins">+150 🪙</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">TIME</span>
+                        <span class="summary-val" id="summary-time">00:42</span>
+                    </div>
+                </div>
+
+                <!-- Celebration Action Row -->
+                <div class="celebration-actions">
+                    <button id="btn-replay-level" class="modal-action-btn secondary-btn">↺ REPLAY</button>
+                    <button id="btn-garage-from-win" class="modal-action-btn secondary-btn">🏬 GARAGE</button>
+                    <button id="btn-menu-from-win" class="modal-action-btn secondary-btn">🏠 MENU</button>
+                    <button id="btn-next-level" class="modal-action-btn primary-glow-btn">NEXT LEVEL ➔</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================================================================
+             GAME OVER / WRECKED MODAL (PHASE 3)
+             ================================================================== -->
+        <div id="game-over-modal" class="hidden">
+            <div class="game-over-card">
+                <div class="game-over-badge">MISSION FAILED</div>
+                <h2 class="game-over-title" id="game-over-title">VEHICLE WRECKED</h2>
+                <p class="game-over-desc" id="game-over-desc">Hull integrity depleted in heavy traffic collision.</p>
+
+                <div class="game-over-actions">
+                    <button id="btn-menu-from-fail" class="modal-action-btn secondary-btn">🏠 MENU</button>
+                    <button id="btn-garage-from-fail" class="modal-action-btn secondary-btn">🏬 GARAGE</button>
+                    <button id="btn-retry-level" class="modal-action-btn primary-glow-btn red-glow-btn">↺ RETRY MISSION</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================================================================
+             PAUSE MODAL (PHASE 4)
+             ================================================================== -->
+        <div id="pause-modal" class="hidden">
+            <div class="pause-card">
+                <div class="pause-badge">GAME PAUSED</div>
+                <h2 class="pause-title">PIT STOP</h2>
+                <div class="pause-actions-list">
+                    <button id="btn-pause-resume" class="menu-btn primary-menu-btn">
+                        <span class="btn-text">RESUME RACE</span>
+                        <span class="btn-icon">▶</span>
+                    </button>
+                    <button id="btn-pause-restart" class="menu-btn secondary-menu-btn">
+                        <span class="btn-text">RESTART MISSION</span>
+                        <span class="btn-icon">↺</span>
+                    </button>
+                    <button id="btn-pause-levels" class="menu-btn secondary-menu-btn">
+                        <span class="btn-text">MISSION TRACKS</span>
+                        <span class="btn-icon">🏁</span>
+                    </button>
+                    <button id="btn-pause-garage" class="menu-btn secondary-menu-btn">
+                        <span class="btn-text">CAR GARAGE</span>
+                        <span class="btn-icon">🏬</span>
+                    </button>
+                    <button id="btn-pause-menu" class="menu-btn outline-menu-btn">
+                        <span class="btn-text">MAIN MENU</span>
+                        <span class="btn-icon">🏠</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================================================================
+             HOW TO PLAY / CONTROLS MODAL (PHASE 4)
+             ================================================================== -->
+        <div id="help-modal" class="hidden">
+            <div class="help-card">
+                <div class="modal-header">
+                    <div class="modal-title-wrap">
+                        <h2 class="modal-title">CONTROLS & HOW TO PLAY</h2>
+                        <span class="modal-subtitle">DUAL KEYBOARD & TOUCH GAMEPAD</span>
+                    </div>
+                    <button id="btn-close-help" class="icon-btn close-modal-btn">✕</button>
+                </div>
+                <div class="help-grid">
+                    <div class="help-item">
+                        <span class="help-key">W / UP ARROW / GAS</span>
+                        <span class="help-desc">Accelerate Forward</span>
+                    </div>
+                    <div class="help-item">
+                        <span class="help-key">S / DOWN ARROW / BRAKE</span>
+                        <span class="help-desc">Brake & Reverse</span>
+                    </div>
+                    <div class="help-item">
+                        <span class="help-key">A / D / LEFT / RIGHT</span>
+                        <span class="help-desc">Steer & Drift around bends</span>
+                    </div>
+                    <div class="help-item">
+                        <span class="help-key">SPACEBAR / NITRO</span>
+                        <span class="help-desc">Supersonic Nitro Jet Boost</span>
+                    </div>
+                    <div class="help-item">
+                        <span class="help-key">P / ESC KEY</span>
+                        <span class="help-desc">Pause Menu</span>
+                    </div>
+                    <div class="help-item">
+                        <span class="help-key">L KEY</span>
+                        <span class="help-desc">Select Mission Track</span>
+                    </div>
+                    <div class="help-item">
+                        <span class="help-key">G KEY</span>
+                        <span class="help-desc">Open Vehicle Garage</span>
+                    </div>
+                    <div class="help-item">
+                        <span class="help-key">M KEY</span>
+                        <span class="help-desc">Mute / Unmute Audio Synthesizer</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================================================================
+             MAIN MENU SCREEN (PHASE 4)
+             ================================================================== -->
+        <div id="main-menu-screen">
+            <div class="menu-content-card">
+                <div class="menu-tag">ARCADE RACING REVOLUTION</div>
+                <h1 class="main-title">TURBO 2D</h1>
+                <div class="main-subtitle">APEX VELOCITY SPEEDWAY</div>
+
+                <!-- Active car info banner in menu -->
+                <div class="menu-car-pill" id="menu-car-pill">
+                    <span class="car-pill-label">ACTIVE RIDE</span>
+                    <span class="car-pill-name" id="menu-car-name">RUSTY HATCHBACK</span>
+                </div>
+
+                <div class="main-menu-actions">
+                    <button id="btn-main-start" class="menu-btn primary-menu-btn pulse-glow">
+                        <span class="btn-text">START RACE</span>
+                        <span class="btn-icon">🏁</span>
+                    </button>
+                    <button id="btn-main-levels" class="menu-btn secondary-menu-btn">
+                        <span class="btn-text">MISSION TRACKS</span>
+                        <span class="btn-icon">🏆</span>
+                    </button>
+                    <button id="btn-main-garage" class="menu-btn secondary-menu-btn">
+                        <span class="btn-text">10-CAR GARAGE</span>
+                        <span class="btn-icon">🏎️</span>
+                    </button>
+                    <button id="btn-main-help" class="menu-btn outline-menu-btn">
+                        <span class="btn-text">HOW TO PLAY</span>
+                        <span class="btn-icon">🎮</span>
+                    </button>
+                </div>
+
+                <div class="menu-footer-bar">
+                    <div class="menu-stat-pill">
+                        <span class="pill-label">COINS</span>
+                        <span id="menu-coins-val" class="pill-val">🪙 0</span>
+                    </div>
+                    <div class="menu-stat-pill">
+                        <span class="pill-label">UNLOCKED</span>
+                        <span id="menu-unlocked-val" class="pill-val">1/10 TRACKS</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- PWA Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator && (window.location.protocol === 'http:' || window.location.protocol === 'https:')) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('[PWA] Service Worker registered with scope:', reg.scope))
+                    .catch(err => console.warn('[PWA] Service Worker registration failed:', err));
+            });
+        }
+    </script>
+
+    <!-- Core Game Engine -->
+    <script src="game.js"></script>
+</body>
+</html>

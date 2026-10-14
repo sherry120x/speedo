@@ -38,6 +38,20 @@ html, body {
     color: #ffffff;
     display: flex;
     justify-content: center;
+}
+
+/* Universal Hidden Utility */
+.hidden,
+#main-menu-screen.hidden,
+#pause-modal.hidden,
+#help-modal.hidden,
+#drift-banner.hidden,
+#near-miss-banner.hidden {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
     align-items: center;
     touch-action: none;
 }
